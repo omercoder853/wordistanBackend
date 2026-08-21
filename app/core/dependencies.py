@@ -18,12 +18,22 @@ def get_current_user(
                 detail="Invalid or expired token",
                 headers={"WWW-Authenticate":"Bearer"}
             )
-        return user_response.user
+        return {"user":user_response.user,"token":token}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+def get_supabase_client(current_user=Depends(get_current_user)):
+    token = current_user["token"]
+    supabase.postgrest.session.headers.update({
+        "Authorization": f"Bearer {token}"
+    })
+
+    return {"db":supabase , "user":current_user["user"]}
     
     

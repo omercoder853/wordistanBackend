@@ -18,13 +18,11 @@ def auth_login(payload: LoginRequest):
                 detail="Login failed, user or session not found."
             )
             
-        return {
-            "access_token": session.access_token,
-            "refresh_token": session.refresh_token,
-            "token_type": session.token_type,
-            "expires_in": session.expires_in,
-            "user_id": user.id
-        }
+        return TokenResponse.model_validate({
+                    **session.__dict__,
+                    "user_id":user.id
+                })
+    
     except HTTPException:
         raise
     except Exception as e:
@@ -46,13 +44,11 @@ def refresh_token(payload: RefreshRequest):
                 detail="Invalid refresh token"
             )
             
-        return {
-            "access_token": session.access_token,
-            "refresh_token": session.refresh_token,
-            "token_type": session.token_type,
-            "expires_in": session.expires_in,
-            "user_id": user.id
-        }
+        return TokenResponse.model_validate({
+                    **session.__dict__,
+                    "user_id":user.id
+                })
+    
     except HTTPException:
         raise
     except Exception as e:
@@ -77,14 +73,7 @@ def auth_register(payload: RegisterRequest):
             "email": payload.email,
             "password": payload.password,
             "options": {
-                "data": {
-                    "first_name": payload.first_name,
-                    "last_name": payload.last_name,
-                    "nick_name": payload.nick_name,
-                    "birth_date": str(payload.birth_date),
-                    "gender": payload.gender,
-                    "avatar_url": payload.avatar_url
-                }
+                "data": payload.model_dump(mode="json",exclude={"email","password"})
             }
         })
         session = response.session
@@ -96,13 +85,11 @@ def auth_register(payload: RegisterRequest):
                 detail="Registration succeeded, but session could not be established (Email confirmation may be required)."
             )
         
-        return {
-            "access_token": session.access_token,
-            "refresh_token": session.refresh_token,
-            "token_type": session.token_type,
-            "expires_in": session.expires_in,
-            "user_id": user.id
-        }
+        return TokenResponse.model_validate({
+            **session.__dict__,
+            "user_id":user.id
+        })
+    
     except HTTPException:
         raise
     except Exception as e:
