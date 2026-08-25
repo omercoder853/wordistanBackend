@@ -1,26 +1,27 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.core.supabase import supabase
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse
 from app.core.dependencies import get_current_user,get_supabase_client
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/login", status_code=status.HTTP_200_OK, response_model=TokenResponse)
+@router.post("/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 def auth_login(payload: LoginRequest):
     try:
         res = supabase.auth.sign_in_with_password({"email": payload.email, "password": payload.password})
         session = res.session
         user = res.user
-        
         if not session or not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Login failed, user or session not found."
             )
-            
-        return TokenResponse.model_validate({
+        print(user.email)
+        return LoginResponse.model_validate({
                     **session.__dict__,
-                    "user_id":user.id
+                    "user_id":user.id,
+                    "email":user.email,
+                    "metadata":user.user_metadata
                 })
     
     except HTTPException:

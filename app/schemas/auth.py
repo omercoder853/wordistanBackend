@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field , EmailStr
-from typing import Optional
+from typing import Optional,Dict,Any
 from datetime import datetime,date
 from uuid import UUID
 
@@ -26,3 +26,7 @@ class RegisterRequest(BaseModel):
     birth_date : date
     gender : str = Field(...,min_length=4,max_length=6,examples=["male"])
     avatar_url : str | None = None
+
+class LoginResponse(TokenResponse):
+    email : EmailStr
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
