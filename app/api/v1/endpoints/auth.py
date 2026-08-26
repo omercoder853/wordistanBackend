@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.core.supabase import supabase
 from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse
-from app.core.dependencies import get_current_user,get_supabase_client
+from app.core.dependencies import get_supabase_client
+from app.api.v1.endpoints.stats import fetch_user_stats
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -68,27 +69,6 @@ def get_my_profile(client=Depends(get_supabase_client)):
         "user_stats":fetch_user_stats(client=client)
     }
 
-@router.get("/me/stats", status_code=status.HTTP_200_OK)
-def get_my_stats(client=Depends(get_supabase_client)):
-    return fetch_user_stats(client=client)
-
-def fetch_user_stats(client):
-    user_id = client["user"].id
-    try:
-        response = (client["db"].table("user_stats").select("*").eq("user_id", user_id).execute())
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error while fetching statistics: {str(e)}"
-        )
-
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User statistics not found."
-        )
-
-    return response.data[0]
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def auth_register(payload: RegisterRequest):
