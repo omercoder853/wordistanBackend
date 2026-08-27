@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.core.supabase import supabase
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse
-from app.core.dependencies import get_supabase_client
+from app.core.supabase import supabase,supabase_admin
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest
+from app.core.dependencies import get_supabase_client,get_current_user
 from app.api.v1.endpoints.stats import fetch_user_stats
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -17,7 +17,6 @@ def auth_login(payload: LoginRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Login failed, user or session not found."
             )
-        print(user.email)
         return LoginResponse.model_validate({
                     **session.__dict__,
                     "user_id":user.id,
@@ -101,3 +100,39 @@ def auth_register(payload: RegisterRequest):
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail=f"Registration failed: {str(e)}"
         )
+
+@router.delete("/delete-user",status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user=Depends(get_current_user)):
+    user_id = user["user"].id
+    try:
+        res = supabase_admin.auth.admin.delete_user(user_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error while deleting user : {str(e)}"
+        )
+    return
+
+@router.post("/change-password",status_code=status.HTTP_204_NO_CONTENT)
+def change_password(data: ChangePasswordRequest,client=Depends(get_supabase_client)):
+
+    user = client["user"]
+    try:
+        supabase.auth.sign_in_with_password({
+            "email": user.email,
+            "password": data.current_password
+        })
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is wrong"
+        )
+    
+    try:
+        supabase_admin.auth.admin.update_user_by_id(user.id,{"password": data.new_password})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Password can not be changed: {str(e)}"
+        )
+    return 

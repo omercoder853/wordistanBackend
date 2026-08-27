@@ -30,3 +30,7 @@ class RegisterRequest(BaseModel):
 class LoginResponse(TokenResponse):
     email : EmailStr
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)

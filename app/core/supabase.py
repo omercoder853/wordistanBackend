@@ -5,3 +5,8 @@ supabase: Client = create_client(
     supabase_url=settings.SUPABASE_URL,
     supabase_key=settings.SUPABASE_KEY
 )
+
+supabase_admin : Client = create_client(
+    supabase_url=settings.SUPABASE_URL,
+    supabase_key=settings.SUPABASE_KEY
+)
