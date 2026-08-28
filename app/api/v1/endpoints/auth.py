@@ -17,11 +17,12 @@ def auth_login(payload: LoginRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Login failed, user or session not found."
             )
+        metadata = {**(user.user_metadata),"created_at":str(user.created_at)}
         return LoginResponse.model_validate({
                     **session.__dict__,
                     "user_id":user.id,
                     "email":user.email,
-                    "metadata":user.user_metadata
+                    "metadata":metadata
                 })
     
     except HTTPException:
