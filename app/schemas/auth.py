@@ -4,7 +4,7 @@ from datetime import datetime,date
 from uuid import UUID
 
 class LoginRequest(BaseModel):
-    email : EmailStr = Field(... , examples=["deniz.kaya@example.com"])
+    email : EmailStr = Field(... , examples=["deneme1@gmail.com"])
     password : str = Field(... , min_length=6 , examples=["Password123!"])
 
 class TokenResponse(BaseModel):
