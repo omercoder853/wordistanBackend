@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.dependencies import get_supabase_client
+from app.schemas.games import NewGameSession
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -79,3 +80,28 @@ def get_game_sessions(client=Depends(get_supabase_client)):
             "score": round(best_performance_score, 2)
         }
     }
+
+@router.post("/new", status_code=status.HTTP_201_CREATED)
+def create_game_session(payload: NewGameSession, client=Depends(get_supabase_client)):
+    new_session = payload.dict()
+    new_session["user_id"] = client["user"].id
+    try:
+        response = (
+            client["db"]
+            .table("game_sessions")
+            .insert(new_session)
+            .execute()
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create game session: {str(e)}"
+        )
+    
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create game session."
+        )
+    
+    return response.data[0]  
