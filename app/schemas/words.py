@@ -1,12 +1,50 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field,ConfigDict
 from typing import Optional
-from datetime import date
+from datetime import date,datetime
 from uuid import UUID
 
-class WordBase(BaseModel):
-    dictionary_id:int
-    word:str
-    meaning:str
+from pydantic import BaseModel, field_validator
+
+class WordRequest(BaseModel):
+    dictionary_id: int
+    word: str
+    meaning: str
+
+    @field_validator("word")
+    @classmethod
+    def clean_word(cls, v: str) -> str:
+        cleaned = v.strip().lower()
+        if not cleaned:
+            raise ValueError("Word field can not be empty.")
+        return cleaned
+
+    @field_validator("meaning")
+    @classmethod
+    def clean_meaning(cls, v: str) -> str:
+        cleaned = v.strip().lower()
+        if not cleaned:
+            raise ValueError("Meaning field can not be empty.")
+        return cleaned
+
+class WordResponse(BaseModel):
+    id : int
+    dictionary_id : int
+    word : str
+    meaning : str
+    added_at : datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("word")
+    @classmethod
+    def capitalize_word(cls,v:str) -> str:
+        return v.strip().capitalize()
+    
+    @field_validator("meaning")
+    @classmethod
+    def capitalize_meaning(cls,v:str) -> str:
+        return v.strip().capitalize()
+
 
 class DailyWord(BaseModel):
     id:int

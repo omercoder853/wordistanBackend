@@ -1,7 +1,8 @@
 from fastapi import APIRouter,HTTPException,status,Depends,Response
 from app.core.dependencies import get_supabase_client
-from app.schemas.words import WordBase,DailyWord
+from app.schemas.words import WordRequest,DailyWord,WordResponse
 from datetime import date
+from typing import List
 
 router = APIRouter(prefix="/words",tags=["Words"])
 
@@ -28,7 +29,7 @@ def get_daily_word(client = Depends(get_supabase_client)):
         )
     word = res.data["word"]
     try:
-        response = client["db"].table("words").select("id").or_(f"word.eq.{word},meaning.eq.{word}").execute()
+        response = client["db"].table("words").select("id").or_(f"word.eq.{word.lower().strip()},meaning.eq.{word.lower().strip()}").execute()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -40,7 +41,7 @@ def get_daily_word(client = Depends(get_supabase_client)):
     else:
         return DailyWord.model_validate({**res.data,"target_date":today,"is_saved":False,"saved_id":None})
 
-@router.get("/{dict_id}",status_code=status.HTTP_200_OK)
+@router.get("/{dict_id}",status_code=status.HTTP_200_OK,response_model=List[WordResponse])
 def words_list(dict_id:int,client=Depends(get_supabase_client)):
     try:
         response = client["db"].table("words").select("*").eq("dictionary_id",dict_id).execute()
@@ -51,12 +52,19 @@ def words_list(dict_id:int,client=Depends(get_supabase_client)):
             detail=str(e)
         )
 
-@router.post("/add",status_code=status.HTTP_201_CREATED)
-def add_word(payload:WordBase,client=Depends(get_supabase_client)):
+@router.post("/add",status_code=status.HTTP_201_CREATED,response_model=WordResponse)
+def add_word(payload:WordRequest,client=Depends(get_supabase_client)):
     try:
+        print(payload.model_dump(mode="json"))
         response = client["db"].table("words").insert(payload.model_dump(mode="json")).execute()
     except Exception as e:
-        raise HTTPException(
+        if e.code == "23505":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Word already exists in the dictionary"
+            )
+        else:
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e)
             )
@@ -65,9 +73,8 @@ def add_word(payload:WordBase,client=Depends(get_supabase_client)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Word is not added. You are not allowed for this operation or dictionary is not found"
         )
-    return response.data
+    return response.data[0]
 
-    
 
 @router.delete("/delete/{word_id}",status_code=status.HTTP_204_NO_CONTENT)
 def delete_word(word_id:int,client=Depends(get_supabase_client)):
