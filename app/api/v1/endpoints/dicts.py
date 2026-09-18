@@ -38,7 +38,7 @@ def add_dictionary(payload : DictionaryBase,client=Depends(get_supabase_client))
     return response.data
 
 @router.delete("/delete/{dict_id}",status_code=status.HTTP_204_NO_CONTENT)
-def delete_dictionary(dict_id:int,client=Depends(get_supabase_client)):
+def delete_dictionary(dict_id:str,client=Depends(get_supabase_client)):
     try:
         response = client["db"].table("dictionaries").delete().eq("id",dict_id).execute()
     except Exception as e:

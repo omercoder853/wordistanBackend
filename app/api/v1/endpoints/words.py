@@ -42,7 +42,7 @@ def get_daily_word(client = Depends(get_supabase_client)):
         return DailyWord.model_validate({**res.data,"target_date":today,"is_saved":False,"saved_id":None})
 
 @router.get("/{dict_id}",status_code=status.HTTP_200_OK,response_model=List[WordResponse])
-def words_list(dict_id:int,client=Depends(get_supabase_client)):
+def words_list(dict_id:str,client=Depends(get_supabase_client)):
     try:
         response = client["db"].table("words").select("*").eq("dictionary_id",dict_id).execute()
         return response.data
@@ -77,7 +77,7 @@ def add_word(payload:WordRequest,client=Depends(get_supabase_client)):
 
 
 @router.delete("/delete/{word_id}",status_code=status.HTTP_204_NO_CONTENT)
-def delete_word(word_id:int,client=Depends(get_supabase_client)):
+def delete_word(word_id:str,client=Depends(get_supabase_client)):
     try:
         response = client["db"].table("words").delete().eq("id",word_id).execute()
     except Exception as e:

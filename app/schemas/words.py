@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, field_validator
 
 class WordRequest(BaseModel):
-    dictionary_id: int
+    dictionary_id: UUID
     word: str
     meaning: str
 
@@ -27,8 +27,8 @@ class WordRequest(BaseModel):
         return cleaned
 
 class WordResponse(BaseModel):
-    id : int
-    dictionary_id : int
+    id : UUID
+    dictionary_id : UUID
     word : str
     meaning : str
     added_at : datetime
