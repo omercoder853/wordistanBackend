@@ -54,8 +54,33 @@ async def push_sync_data(payload: SyncPushRequest, client: dict = Depends(get_su
         if res_words.data:
             synced_word_ids = [w["id"] for w in res_words.data]
 
+    if payload.xp_logs:
+        xp_records = [
+            {
+                "id": str(log.id),
+                "user_id": user_id,
+                "action_type": log.action_type,
+                "amount": log.amount,
+                "created_at": (
+                    log.created_at.isoformat()
+                    if hasattr(log.created_at, "isoformat")
+                    else str(log.created_at)
+                ),
+            }
+            for log in sorted(payload.xp_logs, key=lambda x: x.created_at)
+        ]
+
+        res_logs = (
+            db.table("xp_logs")
+            .upsert(xp_records, on_conflict="id", ignore_duplicates=True)
+            .execute()
+        )
+
+        synced_logs_ids = [str(log.id) for log in payload.xp_logs]
+
     return {
         "success": True,
         "synced_dictionary_ids": synced_dict_ids,
-        "synced_word_ids": synced_word_ids
+        "synced_word_ids": synced_word_ids,
+        "synced_xp_logs_ids" : synced_logs_ids
     }
