@@ -8,18 +8,20 @@ router = APIRouter(prefix="/sync", tags=["Sync"])
 async def push_sync_data(payload: SyncPushRequest, client: dict = Depends(get_supabase_client)):
     synced_dict_ids = []
     synced_word_ids = []
+    synced_logs_ids = []
+    synced_session_ids = []
     user_id = client["user"].id
     db = client["db"]
 
-    # 1. ÖNCE SİLİNEN KELİMELERİ SİL
+    # 1. DELETE LOCALLY DELETED WORDS
     if payload.deleted_words_ids:
         db.table("words").delete().in_("id", payload.deleted_words_ids).execute()
 
-    # 2. SİLİNEN SÖZLÜKLERİ SİL
+    # 2. DELETE LOCALLY DELETED DICTIONARIES
     if payload.deleted_dictionary_ids:
         db.table("dictionaries").delete().eq("user_id", user_id).in_("id", payload.deleted_dictionary_ids).execute()
 
-    # 3. SÖZLÜKLERİ UPSERT ET
+    # 3. UPSERT DICTIONARIES
     if payload.dictionaries:
         dict_records = [
             {
@@ -37,7 +39,7 @@ async def push_sync_data(payload: SyncPushRequest, client: dict = Depends(get_su
         if res_dict.data:
             synced_dict_ids = [d["id"] for d in res_dict.data]
 
-    # 4. KELİMELERİ UPSERT ET
+    # 4. UPSERT WORDS
     if payload.words:
         word_records = [
             {
@@ -54,6 +56,7 @@ async def push_sync_data(payload: SyncPushRequest, client: dict = Depends(get_su
         if res_words.data:
             synced_word_ids = [w["id"] for w in res_words.data]
 
+    # 5. UPSERT XP LOGS
     if payload.xp_logs:
         xp_records = [
             {
@@ -78,9 +81,41 @@ async def push_sync_data(payload: SyncPushRequest, client: dict = Depends(get_su
 
         synced_logs_ids = [str(log.id) for log in payload.xp_logs]
 
+    # 6. UPSERT GAME SESSIONS
+    if payload.game_sessions:
+        game_sessions_record = [
+            {
+                "id": str(session.id),
+                "user_id": user_id,
+                "game_mode": session.game_mode,
+                "total_count": session.total_count,
+                "correct_count": session.correct_count,
+                "wrong_count": session.wrong_count,
+                "passed_count": session.passed_count,
+                "duration_secs": session.duration_secs,
+                "score": session.score,
+                "performance_score": session.performance_score,
+                "played_at": (
+                    session.played_at.isoformat()
+                    if hasattr(session.played_at,"isoformat")
+                    else str(session.played_at)
+                ),
+            }
+            for session in sorted(payload.game_sessions, key=lambda x: x.played_at)
+        ]
+
+        res_sessions = (
+            db.table("game_sessions")
+            .upsert(game_sessions_record, on_conflict="id", ignore_duplicates=True)
+            .execute()
+        )
+
+        synced_session_ids = [str(session.id) for session in payload.game_sessions]
+
     return {
         "success": True,
         "synced_dictionary_ids": synced_dict_ids,
         "synced_word_ids": synced_word_ids,
-        "synced_xp_logs_ids" : synced_logs_ids
+        "synced_xp_logs_ids" : synced_logs_ids,
+        "synced_game_sessions" : synced_session_ids,
     }

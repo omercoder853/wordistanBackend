@@ -83,8 +83,9 @@ def get_game_sessions(client=Depends(get_supabase_client)):
 
 @router.post("/new", status_code=status.HTTP_201_CREATED)
 def create_game_session(payload: NewGameSession, client=Depends(get_supabase_client)):
-    new_session = payload.model_dump()
+    new_session = payload.model_dump(mode="json")
     new_session["user_id"] = client["user"].id
+    new_session["id"] = str(new_session["id"])
     try:
         response = (
             client["db"]

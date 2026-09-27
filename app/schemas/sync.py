@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
+from app.schemas.games import NewGameSession
 
 class DictionaryPushItem(BaseModel):
     id: UUID
@@ -28,10 +29,12 @@ class SyncPushRequest(BaseModel):
     deleted_dictionary_ids: Optional[List[UUID]] = []
     dictionaries: Optional[List[DictionaryPushItem]] = []
     words: Optional[List[WordPushItem]] = []        
-    xp_logs: Optional[List[XpLogItem]] = [] 
+    xp_logs: Optional[List[XpLogItem]] = []
+    game_sessions: Optional[List[NewGameSession]] = [] 
 
 class SyncPushResponse(BaseModel):
     success: bool
     synced_dictionary_ids: List[UUID]
     synced_word_ids: List[UUID]
-    synced_xp_logs_ids: List[UUID]  
+    synced_xp_logs_ids: List[UUID]
+    synced_game_sessions: List[UUID]  
