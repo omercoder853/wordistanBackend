@@ -1,5 +1,5 @@
 from fastapi import APIRouter,HTTPException,status,Depends,Response
-from app.schemas.dicts import DictionaryBase,DictionaryResponse
+from app.schemas.dicts import DictionaryBase,DictionaryResponse,DictionaryUpdate
 from app.core.dependencies import get_supabase_client
 
 router = APIRouter(prefix="/dictionaries",tags=["Dictionaries"])
@@ -52,4 +52,35 @@ def delete_dictionary(dict_id:str,client=Depends(get_supabase_client)):
             detail="Dictionary is not found or you are not allowed for this."
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.patch("/update/{dict_id}", status_code=status.HTTP_200_OK)
+def update_dictionary(
+    dict_id: str, 
+    payload: DictionaryUpdate, 
+    client = Depends(get_supabase_client)):
+
+    updated_data = payload.model_dump(exclude_unset=True)
+
+    if not updated_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Updated data cannot be empty."
+        )
+    try:
+        query = client["db"].table("dictionaries").update(updated_data).eq("id", dict_id)
+        response = query.execute()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dictionary is not found or you are not allowed for this."
+        )
+
+    return response.data[0]
+
     
