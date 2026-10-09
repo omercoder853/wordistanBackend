@@ -46,6 +46,12 @@ class MeResponse(BaseModel):
     profile : UserProfile
     user_stats : UserStats
 
+class UpdateProfile(BaseModel):
+    first_name : Optional[str] = None
+    last_name : Optional[str] = None
+    nick_name : Optional[str] = None
+    avatar_url : Optional[str] = None
+
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=6)

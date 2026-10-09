@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.core.supabase import supabase,supabase_admin
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse , UpdateProfile
 from app.core.dependencies import get_supabase_client,get_current_user
 from app.api.v1.endpoints.stats import fetch_user_stats
 
@@ -87,6 +87,32 @@ def get_my_profile(client=Depends(get_supabase_client)):
             detail=str(e)
         )
 
+@router.patch("/me/update" , status_code=status.HTTP_200_OK)
+def update_my_profile(payload : UpdateProfile ,client = Depends(get_supabase_client)):
+    user_id = client["user"].id
+    print(user_id)
+    updated_data = payload.model_dump(exclude_unset=True)
+    print(updated_data)
+    if not updated_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Updated data cannot be empty."
+        )
+    try:
+        query = client["db"].table("profiles").update(updated_data).eq("id", user_id)
+        response = query.execute()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile is not found or you are not allowed for this."
+        )
+    return response.data[0]
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
