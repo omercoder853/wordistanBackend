@@ -8,7 +8,7 @@ class UserStats(BaseModel):
     level : int
     total_xp : int
     max_streak : int
-    updated_at : date
+    updated_at : datetime
     saved_words : int
     translated_words : int
     dict_created : int

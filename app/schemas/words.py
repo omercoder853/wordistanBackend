@@ -55,4 +55,4 @@ class DailyWord(BaseModel):
     example_tr:str
     target_date:date
     is_saved:bool
-    saved_id:int | None
+    saved_id:str | None
