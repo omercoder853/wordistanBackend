@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.core.supabase import supabase,supabase_admin
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse
 from app.core.dependencies import get_supabase_client,get_current_user
 from app.api.v1.endpoints.stats import fetch_user_stats
 
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
+@router.post("/login", status_code=status.HTTP_200_OK,response_model=LoginResponse)
 def auth_login(payload: LoginRequest):
     try:
         res = supabase.auth.sign_in_with_password({"email": payload.email, "password": payload.password})
@@ -17,12 +18,19 @@ def auth_login(payload: LoginRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Login failed, user or session not found."
             )
-        metadata = {**(user.user_metadata),"created_at":str(user.created_at)}
+        try:
+            response = supabase_admin.table("profiles").select("* , user_stats(*)").eq("id" , user.id).execute()
+            user_stats = response.data[0]["user_stats"]
+            profile = response.data[0]
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
         return LoginResponse.model_validate({
                     **session.__dict__,
-                    "user_id":user.id,
-                    "email":user.email,
-                    "metadata":metadata
+                    "profile":profile,
+                    "user_stats":user_stats
                 })
     
     except HTTPException:
@@ -59,15 +67,26 @@ def refresh_token(payload: RefreshRequest):
             detail=f"Refreshing failed: {str(e)}"
         )
 
-@router.get("/me", status_code=status.HTTP_200_OK)
+@router.get("/me", status_code=status.HTTP_200_OK,response_model=MeResponse)
 def get_my_profile(client=Depends(get_supabase_client)):
-    return {
-        "message": "Token is valid, protected endpoint accessed successfully!",
-        "user_id": client["user"].id,
-        "email": client["user"].email,
-        "user_metadata": client["user"].user_metadata,
-        "user_stats":fetch_user_stats(client=client)
-    }
+    user = client["user"]
+    print(user.id)
+    try:
+        response = client["db"].table("profiles").select("* , user_stats(*)").eq("id",user.id).execute()
+        user_stats = response.data[0]["user_stats"]
+        profile = response.data[0]
+        print(response)
+        return MeResponse.model_validate({
+            "profile" : profile,
+            "user_stats" : user_stats
+        })
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)

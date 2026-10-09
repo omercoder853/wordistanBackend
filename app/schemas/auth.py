@@ -2,6 +2,18 @@ from pydantic import BaseModel, Field , EmailStr
 from typing import Optional,Dict,Any
 from datetime import datetime,date
 from uuid import UUID
+from app.schemas.stats import UserStats
+
+class UserProfile(BaseModel):
+    id : UUID
+    email : EmailStr
+    first_name : str
+    last_name : str
+    nick_name : str
+    birth_date : date
+    gender : str
+    avatar_url : str
+    created_at : datetime
 
 class LoginRequest(BaseModel):
     email : EmailStr = Field(... , examples=["deneme1@gmail.com"])
@@ -12,7 +24,6 @@ class TokenResponse(BaseModel):
     refresh_token:str
     token_type:str = "bearer"
     expires_in:int
-    user_id : UUID
 
 class RefreshRequest(BaseModel):
     refresh_token:str
@@ -28,8 +39,12 @@ class RegisterRequest(BaseModel):
     avatar_url : str | None = None
 
 class LoginResponse(TokenResponse):
-    email : EmailStr
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    profile: UserProfile
+    user_stats : UserStats
+
+class MeResponse(BaseModel):
+    profile : UserProfile
+    user_stats : UserStats
 
 class ChangePasswordRequest(BaseModel):
     current_password: str

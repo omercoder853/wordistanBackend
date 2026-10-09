@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends,Response
 from app.core.dependencies import get_supabase_client
+from app.schemas.stats import UserStats
 
 router = APIRouter(prefix="/stats", tags=["User Stats"])
 
@@ -19,9 +20,9 @@ def fetch_user_stats(client):
             detail="User statistics not found."
         )
 
-    return response.data[0]
+    return UserStats.model_validate(response.data[0])
 
-@router.get("/", status_code=status.HTTP_200_OK)
+@router.get("/", status_code=status.HTTP_200_OK,response_model=UserStats)
 def get_my_stats(client=Depends(get_supabase_client)):
     return fetch_user_stats(client=client)
 
