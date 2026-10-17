@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends,Body
 from app.core.supabase import supabase,supabase_admin
 from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse , UpdateProfile
 from app.core.dependencies import get_supabase_client,get_current_user
@@ -148,13 +148,25 @@ def auth_register(payload: RegisterRequest):
         )
 
 @router.delete("/delete-user",status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user=Depends(get_current_user)):
+def delete_user(password:str = Body(...,embed=True), user=Depends(get_current_user)):
     user_id = user["user"].id
+    email = user["user"].email
     try:
-        res = supabase_admin.auth.admin.delete_user(user_id)
+        supabase.auth.sign_in_with_password({
+            "email":email,
+            "password":password
+        })
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect"
+        )
+    try:
+        res = supabase_admin.auth.admin.delete_user(user_id)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error while deleting user : {str(e)}"
         )
     return
@@ -170,7 +182,7 @@ def change_password(data: ChangePasswordRequest,client=Depends(get_supabase_clie
         })
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current password is wrong"
         )
     
