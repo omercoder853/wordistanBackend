@@ -59,3 +59,7 @@ class ChangePasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     new_password:str = Field(...,min_length=6)
     access_token : str = Field(...)
+
+class VerifyOTPCode(BaseModel):
+    email:EmailStr = Field(...)
+    code:str = Field(...,max_length=6,min_length=6)

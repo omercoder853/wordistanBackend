@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends,Body
 from app.core.supabase import supabase,supabase_admin
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse , UpdateProfile , ResetPasswordRequest
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse , UpdateProfile , ResetPasswordRequest,VerifyOTPCode
 from app.core.dependencies import get_supabase_client,get_current_user
 from pydantic import EmailStr
 from supabase import create_client
@@ -117,7 +117,7 @@ def update_my_profile(payload : UpdateProfile ,client = Depends(get_supabase_cli
     return response.data[0]
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_204_NO_CONTENT)
 def auth_register(payload: RegisterRequest):
     try:
         response = supabase.auth.sign_up({
@@ -127,19 +127,13 @@ def auth_register(payload: RegisterRequest):
                 "data": payload.model_dump(mode="json",exclude={"email","password"})
             }
         })
-        session = response.session
         user = response.user
         
-        if not session or not user:
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Registration succeeded, but session could not be established (Email confirmation may be required)."
             )
-        
-        return TokenResponse.model_validate({
-            **session.__dict__,
-            "user_id":user.id
-        })
     
     except HTTPException:
         raise
@@ -147,6 +141,49 @@ def auth_register(payload: RegisterRequest):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail=f"Registration failed: {str(e)}"
+        )
+
+@router.post("/verify-otp", status_code=status.HTTP_204_NO_CONTENT)
+def verify_otp(payload: VerifyOTPCode):
+    try:
+        response = supabase.auth.verify_otp({
+            "email": payload.email,
+            "token": payload.code,
+            "type": "signup"
+        })
+
+        user = response.user
+        session = response.session
+
+        if not user or not session:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email verification failed."
+            )
+
+        return {
+            "message": "Email verified successfully.",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code."
+        )
+
+@router.post("/resend-otp",status_code=status.HTTP_204_NO_CONTENT)
+def resend_otp(email:EmailStr = Body(...,embed=True)):
+    try:
+        response = supabase.auth.resend({
+            "email":email,
+            "type":"signup"
+        })
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
 
 @router.delete("/delete-user",status_code=status.HTTP_204_NO_CONTENT)
@@ -203,7 +240,7 @@ def forgot_password(email : EmailStr = Body(...,embed=True)):
         response = supabase.auth.reset_password_for_email(
             email,
             options={
-                "redirect_to":"https://wordistan-web-site.vercel.app/auth/reset-password/"
+                "redirect_to":"https://www.wordistan.com.tr/auth/reset-password/"
             })
     except Exception as e:
         raise HTTPException(
