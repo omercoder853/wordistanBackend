@@ -55,3 +55,7 @@ class UpdateProfile(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=6)
+
+class ResetPasswordRequest(BaseModel):
+    new_password:str = Field(...,min_length=6)
+    access_token : str = Field(...)

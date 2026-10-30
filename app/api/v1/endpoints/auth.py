@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends,Body
 from app.core.supabase import supabase,supabase_admin
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse , UpdateProfile
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshRequest, RegisterRequest , LoginResponse,ChangePasswordRequest , MeResponse , UpdateProfile , ResetPasswordRequest
 from app.core.dependencies import get_supabase_client,get_current_user
-from app.api.v1.endpoints.stats import fetch_user_stats
+from pydantic import EmailStr
+from supabase import create_client
+from app.core.config import settings
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -193,4 +195,31 @@ def change_password(data: ChangePasswordRequest,client=Depends(get_supabase_clie
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Password can not be changed: {str(e)}"
         )
-    return 
+    return
+
+@router.post("/forgot-password",status_code=status.HTTP_204_NO_CONTENT) 
+def forgot_password(email : EmailStr = Body(...,embed=True)):
+    try:
+        response = supabase.auth.reset_password_for_email(
+            email,
+            options={
+                "redirect_to":"https://wordistan-web-site.vercel.app/auth/reset-password/"
+            })
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+@router.post("/reset-password",status_code=status.HTTP_204_NO_CONTENT)
+def forgot_password(payload:ResetPasswordRequest):
+    try:
+        user_client = create_client(settings.SUPABASE_URL,settings.SUPABASE_KEY)
+        user_client.auth.set_session(access_token=payload.access_token,refresh_token="")
+        response = user_client.auth.update_user({"password":payload.new_password})
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
